@@ -11,6 +11,7 @@
 
 
 #portfolio article {margin-bottom:60px; }
+#portfolio article header {background:transparent; }
 #portfolio article .image img {box-shadow:5px 5px 10px #cccccc; }
 #portfolio article.item header h3 {font-weight:600; }
 #portfolio article.item p {font-size:0.7em; line-height:22px; text-align:justify; margin-bottom:1em; }
