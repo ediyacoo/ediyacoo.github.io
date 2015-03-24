@@ -1,0 +1,31 @@
+/**
+#main > section.one {background:transparent; padding:0px; position:relative; }
+#main > section.one .background {background-image:url("../images/background.jpg");filter: blur(5px);-webkit-filter: blur(5px); height:550px; position:absolute; top:0px; width:100%; z-index:-1 }
+#main > section.one .container {margin-top:5em; }
+*/
+
+
+#skill div.column{padding:40px 0 0 15% !important; }
+#skill table td {text-align:left;}
+#skill table td:first-child {width:250px;}
+
+
+#portfolio article {margin-bottom:60px; }
+#portfolio article .image img {box-shadow:5px 5px 10px #cccccc; }
+#portfolio article.item header h3 {font-weight:600; }
+#portfolio article.item p {font-size:0.7em; line-height:22px; text-align:justify; margin-bottom:1em; }
+
+
+#honor p {margin-bottom:1em; }
+#honor p span {font-size:0.7em; }
+
+
+#experience .item {text-align:left; position:relative; }
+#experience .item time {float:right; font-size:.7em;  }
+#experience .item ul {list-style:disc; padding-left:1em; font-size:0.65em;}
+#experience .item ul li {line-height:25px; }
+
+
+#publication p {text-align:left; font-weight:600; margin-bottom:.5em;  }
+#publication ul {text-align:left; }
+#publication ul li {margin-bottom:1em; line-height:22px; font-size:0.7em; }
