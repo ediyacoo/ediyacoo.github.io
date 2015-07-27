@@ -1,0 +1,252 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+  <title>ESRI interview1</title>
+  <link rel="stylesheet" href="http://js.arcgis.com/3.14/esri/css/esri.css">
+  <style>
+    html, body, #map {
+      padding:0;
+      margin:0;
+      height:100%;
+    }
+
+		#map path{fill:rgba(255,255,0,0.8); stroke-opacity:0; }
+		#map select#switchLayer {position:absolute; width:auto; height:auto; top:10px; right:10px; color:#000000; list-style:none; padding:10px; margin:0px; z-index:100; }
+
+  </style>
+  <script src="//js.arcgis.com/3.14/"></script>
+  <script>
+		var app={
+			map:null,
+			dbURL:"http://vision.sdsu.edu/hdma/query/getTweet/streaming",
+			layer:{},
+			canvasType:"heatmap"
+		}
+
+
+    require([
+      "esri/map",
+      "esri/dijit/LayerSwipe",
+      "esri/arcgis/utils",
+			"esri/geometry/webMercatorUtils",
+			"esri/geometry/Point",
+			"esri/geometry/Circle",
+			"esri/symbols/SimpleFillSymbol",
+			"esri/graphic",
+			"esri/layers/GraphicsLayer",
+			"esri/layers/MapImage",
+			"esri/layers/MapImageLayer",
+      "dojo/_base/array",
+      "dojo/domReady!"
+    ], function(Map, LayerSwipe, arcgisUtils, WebMercatorUtils, Point, Circle, SimpleFillSymbol, Graphic, GraphicLayer, MapImage, MapImageLayer, array){
+
+
+
+			//global variable
+			app.WebMercatorUtils=WebMercatorUtils;
+			app.Point=Point;
+			app.Circle=Circle;
+			app.SimpleFillSymbol=SimpleFillSymbol;
+			app.Graphic=Graphic;
+			app.GraphicLayer=GraphicLayer;
+			app.MapImage=MapImage;
+			app.MapImageLayer=MapImageLayer;
+
+
+			//map
+			app.map=new Map("map", {
+				basemap:"dark-gray",
+				center:[-117.0,32.915],
+				zoom:10
+			});
+
+
+			//layer swiper
+			var swipeWidget = app.swipeWidget=new LayerSwipe({
+				type: "vertical",  //Try switching to "scope" or "horizontal"
+				map: app.map,
+				left:app.map.width*0.6
+			}, "swipeDiv");
+
+
+			//marker layer
+			var gl=app.layer.gl=new GraphicLayer({id:"tweets"});
+			app.map.addLayer(gl);
+
+			//mapimage layer
+			var ml=app.layer.ml=new app.MapImageLayer({id:"heatmap"});
+
+			//select onchange event
+			dojo.query("#switchLayer").on("change", function(evt){
+				app.canvasType=evt.target.value;
+				run.trigger();
+			});
+
+			//request tweets when map extent changes
+			app.map.on("extent-change", function(e){
+				run.trigger()
+			})
+    });
+
+
+
+
+		//functions
+		var run={
+			trigger: function(){
+				//set parameter to get tweets
+				var params={
+					startDate:"2015-07-01",
+					endDate:"2015-07-25",
+					bbox:extent
+				},
+				gl=app.layer.gl,
+				ml=app.layer.ml,
+				extent=app.map.extent;
+
+				//read and show tweets
+				run.getTweet(params, function(json){
+					if(json&&json.length>0){
+						//clear layers
+						gl.clear();
+						ml.removeAllImages();
+
+
+						//show circle
+						json.forEach(function(t){
+							t.graphicLayer=run.makeLayer(t)
+							//add layer
+							gl.add(t.graphicLayer)
+						})
+
+						//get heatmap image from server side
+						var url=app.dbURL+"?",
+								width=app.map.width,
+								height=app.map.height;
+
+						params.format="image/png";
+						params.canvasType=app.canvasType;
+						params.canvasWidth=width;
+						params.cavasHeight=height;
+						params.heatmapRadius=15;
+
+						for(var k in params){
+							url+=k+"="+String(params[k]).trim()+"&";
+						}
+
+						//mapimage layer
+						var mapImage=new app.MapImage({
+									extent:extent,
+									width:width,
+									height:height,
+									href:url
+								});
+
+						ml.addImage(mapImage);
+						app.map.addLayer(ml)
+
+
+						//update LayerSwipe
+						app.swipeWidget.layers=[ml];
+						//console.log(app.swipeWidget)
+						if(app.swipeWidget.loaded){
+							app.swipeWidget.swipe();
+						}else{
+							app.swipeWidget.startup();
+						}
+
+					}
+				})
+			},
+
+
+			//get tweet
+			getTweet: function(options, callback){
+				options=options || {}
+				options.startDate=options.startDate || "2015-07-01";
+				options.endDate=options.endDate || "2015-07-25";
+				options.bbox=options.bbox || app.map.extent;
+				options.format=options.format || "json"
+				options.searchRegion=options.searchRegion || "sandiego";
+				options.limit=options.limit || 500
+
+				//convert to wgs84
+				if(options.bbox&&options.bbox.spatialReference.wkid==102100){
+					options.bbox=run.convert2WGS84(options.bbox);
+				}
+
+				options.bbox=[options.bbox.xmin, options.bbox.ymin, options.bbox.xmax, options.bbox.ymax].join(",");
+
+
+
+				//get tweets
+				dojo.io.script.get({
+					url:app.dbURL,
+					content:options,
+					callbackParamName:"jscallback"
+				}).then(function(json){
+					if(callback){
+						callback(json)
+					}
+				})
+			},
+
+
+
+			//convert web mercator to wgs84
+			convert2WGS84: function(geometry){
+				var result=null;
+				if(app.WebMercatorUtils){
+					result=app.WebMercatorUtils.webMercatorToGeographic(geometry)
+				}
+
+				return result
+			},
+
+
+			//make layer
+			makeLayer: function(t){
+				var layer=null;
+
+				if(t&&t.coordinates&&t.coordinates){
+					var coords=t.coordinates.coordinates,
+							lng=coords[0],
+							lat=coords[1],
+							circle=new app.Circle({
+								center: new app.Point(lng, lat),
+								radius: 50
+							}),
+							sym=new app.SimpleFillSymbol().setColor("blue");
+
+					layer=new app.Graphic(circle, sym)
+				}
+
+
+				return layer;
+			}
+
+
+
+		}
+
+
+
+
+
+  </script>
+
+</head>
+<body>
+  <div id="map" class="map">
+    <div id="swipeDiv"></div>
+		<select id='switchLayer'>
+			<option value='heatmap'>Heatmap</option>
+			<option value='marker'>Marker</option>
+			<option value='point'>Point</option>
+		</select>
+		</div>
+  </div>
+</body>
+</html>
