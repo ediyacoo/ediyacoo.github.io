@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Google Place API example</title>
+        <meta name="viewport" content="initial-scale=1">
+        <meta charset="utf-8">
+        <!-- CSS -->
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.6.0/bootstrap-table.min.css">
+        <style>
+            html, body {width:100%; height:100%; padding:0px; margin:0px; overflow:hidden; }
+            body > .row {height:100%; position:relative; }
+            body > .row > div {height:100%; position:relative;  }
+            body > .row > div:first-child {padding:0px; }
+            #map {height:100%; width:100%; }
+            #search-keyword {width:77%}
+            #search-radius {width:23%; }
+            .table tr:first-child {font-weight:600; }
+        </style>
+
+        <!--script-->
+        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-table/1.6.0/bootstrap-table.min.js"></script>
+		    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAqd6BFSfKhHPiGaNUXnSt6jAzQ9q_3DyU&libraries=places"></script>
+        <script>
+          var app={
+            map:null,
+            googleplace:null
+          }
+
+
+          //init
+          $(document).ready(function(){
+              //init map
+			        app.map=new google.maps.Map(document.getElementById("map"), {
+                center:{lat:32.8, lng:-117},
+                zoom:11
+              });
+
+              //init google place service
+			        app.googlePlace=new google.maps.places.PlacesService(app.map)
+
+
+              //trigger event on input
+              $("#menu").on("keydown", "input", function(e){
+                //only enter
+                if(e.keyCode==13){
+                  searchGooglePlace();
+                }
+              })
+          });
+
+
+          function searchGooglePlace(){
+            var $menu=$("#menu"),
+                params={
+                  text: $menu.find("#search-keyword").val() || "",
+                  category: "restaurant",
+                  center:app.map.getCenter(),
+                  radius:$menu.find("#search-radius").val() || 10 //miles
+                };
+
+            app.googlePlace.nearbySearch({
+							location:params.center,
+							radius:parseFloat(params.radius)*1609.34,
+							types:[params.category],
+							name:params.text
+						}, function(results){
+							console.log(results)
+
+							if(results&&results.length>0){
+                var $target=$("#result"),
+                    $table=$target.find(".table");
+
+                $table.html("<tr><td>Name</td><td>Category</td><td>Latitude</td><td>Longitude</td></tr>");
+
+                //parse results
+								$.each(results, function(i, obj){
+									var name=obj.name,
+										//photoURL=(obj.photos.length>0)?obj.photos[0].getUrl():null,
+										lat=obj.geometry.location.lat().toFixed(4),
+										lng=obj.geometry.location.lng().toFixed(4),
+										types=obj.types.join(", ");
+
+									$table.append("<tr>"+
+									  //"<td>"+((photoURL)?("<img src='"+photoURL+"' style='width:100px; height:100px; ' />"):"")+"</td>"+
+									  "<td>"+name+"</td>"+
+									  "<td>"+types+"</td>"+
+									  //"<td>"+''+"</td>"+
+									  "<td>"+lat+"</td>"+
+									  "<td>"+lng+"</td>"+
+									  "</tr>");
+
+                  //show marker
+                  var marker=new google.maps.Marker({
+                    position:obj.geometry.location,
+                    map:app.map,
+                    title:name
+                  })
+								});
+							}
+						});
+          }
+
+        </script>
+    </head>
+
+    <body>
+      <div class='row'>
+        <!--map-->
+        <div class='col-xs-8'>
+          <div id='map'></div>
+        </div>
+
+        <!--content-->
+        <div class='col-xs-4' id="menu">
+          <div class="input-group input-group-sm">
+            <span class="input-group-addon" title="">Search</span>
+            <input id="search-keyword" type="text" placeholder="Please input a keyword" class="form-control" value="" />
+            <input id="search-radius" type="text" placeholder="Radius (miles)" class="form-control" value="" />
+            <div class="input-group-btn">
+              <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Category<span class="caret"></span></button>
+              <ul class="dropdown-menu dropdown-menu-right">
+                <li><a href="#">Restaurant</a></li>
+                <li><a href="#">Another action</a></li>
+                <li><a href="#">Something else here</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="#">Separated link</a></li>
+              </ul>
+            </div><!-- /btn-group -->
+          </div>
+
+          <!--result-->
+          <div id='result'>
+            <table class='table'></table>
+          </div>
+        </div>
+      </div>
+
+    </body>
+</html>
