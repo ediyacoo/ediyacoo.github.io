@@ -1,0 +1,2 @@
+html,body{height:100%;width:100%;margin:0px;padding:0px}.main{display:flex;height:100%;width:100%}.main__image{position:relative;flex:1 0 100%}.main__image img{width:100%}.main__video{position:relative;flex:1 0 50%}.main__video video{width:100%}.main .highlighter{background:rgba(0,255,0,0.25);border:1px dashed #fff;z-index:1;position:absolute}
+
